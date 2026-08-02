@@ -56,15 +56,40 @@ The plugin officially supports creating an agent pod for a build and stopping it
 
 2. Create a multi-node kind cluster.
 
-Create the cluster:
-Create kind/kind-config.yaml
-kind create cluster \
---name jenkins-lab \
---config kind/kind-config.yaml
-
-
-3. Configure access from your computer.
+    2.1. Create the cluster:
+        Create kind/kind-config.yaml
+        kind create cluster \
+            --name jenkins-lab \
+            --config kind/kind-config.yaml
+    2.2. Validate the new cluster
+            kubectl config current-context
+            kubectl get nodes
+            kubectl get pods -A
+            kuebctl get storageclass
+            kubectl get --raw='/readz?verbose'
+        Output:
+            kind-jenkins-lab
+            jenkins-lab-control-plane
+            jenkins-lab-worker
+            jenkins-lab-worker2
+        
 4. Install Jenkins using Helm.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 5. Configure persistent storage and Jenkins Configuration as Code.
 6. Configure Kubernetes dynamic agent pods.
 7. Run a simple Groovy “Hello World” pipeline.
