@@ -52,8 +52,17 @@ flowchart TD
 The plugin officially supports creating an agent pod for a build and stopping it when the build finishes. Jenkins Kubernetes plugin documentation
 
 **Recommended implementation order**
-1. Verify Docker, kind, kubectl and Helm.
+1. Verify Docker, kind, kubectl and Helm.---Done
+
 2. Create a multi-node kind cluster.
+
+Create the cluster:
+Create kind/kind-config.yaml
+kind create cluster \
+--name jenkins-lab \
+--config kind/kind-config.yaml
+
+
 3. Configure access from your computer.
 4. Install Jenkins using Helm.
 5. Configure persistent storage and Jenkins Configuration as Code.
