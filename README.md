@@ -73,7 +73,56 @@ The plugin officially supports creating an agent pod for a build and stopping it
             jenkins-lab-worker
             jenkins-lab-worker2
         
-4. Install Jenkins using Helm.
+3. Install Jenkins using Helm.
+
+    3.1. Add the official Jenins Helm repostory
+    
+        ``helm repo add jenkins https://charts.jenkins.io`
+    3.2. Check the chart
+         ``bash``
+            helm repo update
+    3.3. Crate the Jenkins namespace
+        `` kubectl create namespae jenkins`
+
+        NAME: jenkins
+LAST DEPLOYED: Sun Aug  2 14:43:26 2026
+NAMESPACE: jenkins
+STATUS: deployed
+REVISION: 1
+NOTES:
+1. Get your 'admin' user password by running:
+  kubectl exec --namespace jenkins -it svc/jenkins -c jenkins -- /bin/cat /run/secrets/additional/chart-admin-password && echo
+2. Get the Jenkins URL to visit by running these commands in the same shell:
+  echo http://127.0.0.1:8080
+  kubectl --namespace jenkins port-forward svc/jenkins 8080:8080
+
+3. Login with the password from step 1 and the username: admin
+4. Configure security realm and authorization strategy
+5. Use Jenkins Configuration as Code by specifying configScripts in your values.yaml file, see documentation: http://127.0.0.1:8080/configuration-as-code and examples: https://github.com/jenkinsci/configuration-as-code-plugin/tree/master/demos
+
+For more information on running Jenkins on Kubernetes, visit:
+https://cloud.google.com/solutions/jenkins-on-container-engine
+
+For more information about Jenkins Configuration as Code, visit:
+https://jenkins.io/projects/jcasc/
+
+
+NOTE: Consider using a custom image with pre-installed plugins
+
+xjgXCxMuVMUvAsqJi1Eb4M
+
+
+4. Port-forward
+
+kubectl config current-context
+if current-context isnot jenkins
+kubectl get pods,svc,pvc -n jenkins ==> pvc should be bound
+restart port-forarding
+kubectl port-forward -n jenkins svc/jenkins 8080:8080
+** IMP : Keep the terminal open**
+
+
+5. Once logged in, our next step is to verify the Kubernetes plugin and run a basic Groovy pipeline on a temporary agent pod.
 
 
 
