@@ -44,7 +44,7 @@ spec:
                 expression { params.TARGET_ENV }
             }
             steps {
-                timeout(time: 5, unit: 'MINUTES') {
+                timeout(time: 15, unit: 'MINUTES') {
                     input (
                         message: "Approve practice deployment to ${params.TARGET_ENV}?",
                         ok: 'Approve',
