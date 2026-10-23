@@ -41,7 +41,7 @@ spec:
 
         stage('Deployment Approval') {
             when {
-                expression ${ params.TARGET_ENV }
+                expression { params.TARGET_ENV }
             }
             steps {
                 timeout(time: 5, unit: MINUTES) {
