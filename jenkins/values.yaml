@@ -16,8 +16,8 @@ controller:
       memory: 2Gi
 
   javaOpts: >-
-    -Xms512m
-    -Xmx1536m
+    -Xms265m
+    -Xmx1024m
 
 persistence:
   enabled: true

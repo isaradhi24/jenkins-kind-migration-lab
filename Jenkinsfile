@@ -25,8 +25,36 @@ spec:
 '''
         }
     }
-
+    parameters {
+        choice(
+            name: 'TARGET_ENV',
+            choices: ['dev', 'qa', 'prod'],
+            description: 'Select deployment environment'
+        )
+    }
     stages {
+        stage( 'Showw Environment' ) {
+            steps {
+                echo "Selected environment: ${params.TARGET_ENV}"
+            }
+        }
+
+        stage('Deployment Approval') {
+            when {
+                expression ${ params.TARGET_ENV }
+            }
+            steps {
+                timeout(time: 5, unit: MINUTES) {
+                    input (
+                        message: "Approve practice deployment to ${params.TARGET_ENV}?",
+                        ok: 'Approve',
+                        submitter: 'admin'
+                        )
+                        }
+                    }
+                }
+
+
         stage('Agent Test') {
             steps {
                 container('shell') {
