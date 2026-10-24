@@ -23,7 +23,7 @@ spec:
           cpu: 250m
           memory: 256Mi
 
-     - name: maven
+    - name: maven
       image: maven:3.9-eclipse-temurin-21
       command:
         - cat
@@ -54,7 +54,7 @@ spec:
 
         stage('Deployment Approval') {
             when {
-                expression { params.TARGET_ENV }
+                expression { params.TARGET_ENV != 'dev' }
             }
             steps {
                 timeout(time: 15, unit: 'MINUTES') {
@@ -131,7 +131,7 @@ spec:
                     )
                 }
                 success {
-                    archiveArtifact(
+                    archiveArtifacts(
                         artifacts: 'app/target/orders-service-*.jar',
                         fingerprint: true
                     )
