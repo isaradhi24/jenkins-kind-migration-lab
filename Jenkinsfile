@@ -35,6 +35,19 @@ spec:
         limits:
           cpu: "2"
           memory: 1536Mi
+
+    - name: trivy
+      image: aquasec/trivy:0.76.1
+      command:
+        - cat
+      tty: true
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
 '''
         }
     }
@@ -135,6 +148,26 @@ spec:
                         artifacts: 'app/target/orders-service-*.jar',
                         fingerprint: true
                     )
+                }
+            }
+        }
+
+        stage('Dependency and Secret Scan') {
+            steps {
+                container('trivy') {
+                    dir('app') {
+                        sh '''
+                            trivy --version
+
+                            trivy fs \
+                              --scanners vuln,secret \
+                              --severity HIGH,CRITICAL \
+                              --exit-code 1 \
+                              --timeout 10m \
+                              --skip-dirs .git \
+                              .
+                        '''
+                    }
                 }
             }
         }
