@@ -125,8 +125,16 @@ spec:
             }
             post {
                 always {
-                    junit 'app/target/surefire-reports/*.xml'
-                    allowEmptyResults: false
+                    junit (
+                        testResults: 'app/target/surefire-reports/*.xml',
+                        allowEmptyResults: false
+                    )
+                }
+                success {
+                    archiveArtifact(
+                        artifacts: 'app/target/orders-service-*.jar',
+                        fingerprint: true
+                    )
                 }
             }
         }
