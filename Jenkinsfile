@@ -238,7 +238,7 @@ spec:
                               --offline-scan \
                               --severity HIGH,CRITICAL \
                               --exit-code 1 \
-                              --timeout 15m \
+                              --timeout 30m \
                               target/
 
                             # Scan source/configuration for secrets.
@@ -256,6 +256,9 @@ spec:
                 }
             }
         }
+        echo "Persistent Trivy cache:"
+        du -sh /cache/trivy
+        ls -lh /cache/trivy/db /cache/trivy/java-db
     } // End of Dependency and Secret Scan stage
 
     post {
