@@ -58,6 +58,19 @@ spec:
         limits:
           cpu: "1"
           memory: 1Gi
+    - name: aws
+      image: public.ecr.aws/aws-cli/aws-cli:2.27.41
+      command:
+        - cat
+      tty: true
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+
       volumeMounts:
         - name: build-cache
           mountPath: /cache
@@ -76,6 +89,41 @@ spec:
         )
     }
     stages {
+        stage('Verify AWS Access') {
+            steps {
+                container('aws') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'aws-jenkins-ecr',
+                            usernameVariable: 'AWS_ACCESS_KEY_ID',
+                            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                        )
+                    ]) {
+                        sh '''
+                            set +x
+                            set -eu
+                            export AWS_DEFAULT_REGION=us-east-1
+                            export AWS_PAGER=""
+
+                            aws sts get-caller-identity
+
+                            account=$(aws sts get-caller-identity \
+                              --query Account --output text)
+                            test "$account" = "149703445367"
+
+                            aws ecr describe-images \
+                              --repository-name orders-service \
+                              --query 'imageDetails[].imageTags' \
+                              --output json
+
+                            aws ecr get-login-password > /dev/null
+
+                            echo "AWS identity and ECR access verified"
+                        '''
+                    }
+                }
+            }
+        }
         stage( 'Show Environment' ) {
             steps {
                 echo "Selected environment: ${params.TARGET_ENV}"
