@@ -159,12 +159,22 @@ spec:
                         sh '''
                             trivy --version
 
+                            # Scan dependencies packaged in the application.
                             trivy fs \
-                              --scanners vuln,secret \
+                              --scanners vuln \
+                              --offline-scan \
                               --severity HIGH,CRITICAL \
                               --exit-code 1 \
                               --timeout 10m \
+                              target/
+
+                            # Scan source and configuration for secrets.
+                            trivy fs \
+                              --scanners secret \
+                              --exit-code 1 \
+                              --timeout 5m \
                               --skip-dirs .git \
+                              --skip-dirs target \
                               .
                         '''
                     }
