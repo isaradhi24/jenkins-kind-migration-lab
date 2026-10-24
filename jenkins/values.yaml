@@ -22,6 +22,17 @@ controller:
   additionalPlugins:
     - junit
 
+  probes:
+    startupProbe:
+      periodSeconds: 10
+      timeoutSeconds: 10
+      failureThreshold: 60
+
+    livenessProbe:
+      periodSeconds: 10
+      timeoutSeconds: 10
+      failureThreshold: 6
+
 persistence:
   enabled: true
   storageClass: standard
