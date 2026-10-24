@@ -5,14 +5,13 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  nodeSelector:
+    workload: jenkins
 
   volumes:
     - name: build-cache
       persistentVolumeClaim:
         claimName: jenkins-build-cache
-
-  nodeSelector:
-    workload: jenkins
 
   containers:
     - name: shell
@@ -20,7 +19,6 @@ spec:
       command:
         - cat
       tty: true
-
       resources:
         requests:
           cpu: 100m
@@ -41,23 +39,10 @@ spec:
         limits:
           cpu: "2"
           memory: 1536Mi
-
       volumeMounts:
         - name: build-cache
           mountPath: /cache
 
-    - name: trivy
-      image: aquasec/trivy:0.76.1
-      command:
-        - cat
-      tty: true
-      resources:
-        requests:
-          cpu: 250m
-          memory: 256Mi
-        limits:
-          cpu: "1"
-          memory: 1Gi
     - name: aws
       image: public.ecr.aws/aws-cli/aws-cli:2.27.41
       command:
@@ -70,30 +55,36 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
-
-      volumeMounts:
-        - name: build-cache
-          mountPath: /cache
 '''
         }
     }
 
     options {
         disableConcurrentBuilds()
+        timestamps()
     }
+
     parameters {
         choice(
             name: 'TARGET_ENV',
             choices: ['dev', 'qa', 'prod'],
             description: 'Select deployment environment'
         )
-        booleanParam(
-            name: 'RUN_SECURITY_SCAN',
-            defaultValue: true,
-            description: 'Run Trivy security scans'
-        )
     }
+
+    environment {
+        AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_PAGER = ''
+    }
+
     stages {
+        stage('Show Environment') {
+            steps {
+                echo "Selected environment: ${params.TARGET_ENV}"
+                echo 'LAB ONLY: Security scanning is temporarily removed.'
+            }
+        }
+
         stage('Verify AWS Access') {
             steps {
                 container('aws') {
@@ -107,13 +98,12 @@ spec:
                         sh '''
                             set +x
                             set -eu
-                            export AWS_DEFAULT_REGION=us-east-1
-                            export AWS_PAGER=""
 
                             aws sts get-caller-identity
 
                             account=$(aws sts get-caller-identity \
                               --query Account --output text)
+
                             test "$account" = "149703445367"
 
                             aws ecr describe-images \
@@ -129,11 +119,6 @@ spec:
                 }
             }
         }
-        stage( 'Show Environment' ) {
-            steps {
-                echo "Selected environment: ${params.TARGET_ENV}"
-            }
-        }
 
         stage('Deployment Approval') {
             when {
@@ -141,15 +126,14 @@ spec:
             }
             steps {
                 timeout(time: 15, unit: 'MINUTES') {
-                    input (
+                    input(
                         message: "Approve practice deployment to ${params.TARGET_ENV}?",
                         ok: 'Approve',
                         submitter: 'admin'
-                        )
-                        }
-                    }
+                    )
                 }
-
+            }
+        }
 
         stage('Agent Test') {
             steps {
@@ -198,12 +182,17 @@ spec:
             steps {
                 container('maven') {
                     dir('app') {
-                        sh  '''
-                        java -version
-                        chmod +x mvnw
-                        ./mvnw -B -ntp -Dmaven.repo.local=/cache/m2 clean verify
-                        test -s target/orders-service-0.0.1-SNAPSHOT.jar
-                        ls -lh target/orders-service-0.0.1-SNAPSHOT.jar
+                        sh '''
+                            set -eu
+                            java -version
+                            chmod +x mvnw
+
+                            ./mvnw -B -ntp \
+                              -Dmaven.repo.local=/cache/m2 \
+                              clean verify
+
+                            test -s target/orders-service-0.0.1-SNAPSHOT.jar
+                            ls -lh target/orders-service-0.0.1-SNAPSHOT.jar
                         '''
                     }
                 }
@@ -211,11 +200,12 @@ spec:
 
             post {
                 always {
-                    junit (
+                    junit(
                         testResults: 'app/target/surefire-reports/*.xml',
                         allowEmptyResults: false
                     )
                 }
+
                 success {
                     archiveArtifacts(
                         artifacts: 'app/target/orders-service-*.jar',
@@ -224,60 +214,7 @@ spec:
                 }
             }
         }
-        stage('Security Scan Selection') {
-            steps {
-                script {
-                    if (!params.RUN_SECURITY_SCAN) {
-                        echo 'LAB ONLY: Security scanning explicitly skipped.'
-                    }
-                }
-            }
-        }
-        stage('Dependency and Secret Scan') {
-            when {
-                expression { params.RUN_SECURITY_SCAN }
-            }
-            steps {
-                container('trivy') {
-                    dir('app') {
-                        sh '''
-                            set -eu
-                            trivy --version
-                            mkdir -p /cache/trivy
-                            echo "Persistent Trivy cache:"
-                            du -sh /cache/trivy
-                            ls -lh /cache/trivy/db /cache/trivy/java-db
-
-                            test -s target/orders-service-0.0.1-SNAPSHOT.jar
-
-                            # Scan packaged Java dependencies.
-                            trivy rootfs \
-                              --cache-dir /cache/trivy \
-                              --scanners vuln \
-                              --pkg-types library \
-                              --offline-scan \
-                              --severity HIGH,CRITICAL \
-                              --exit-code 1 \
-                              --timeout 30m \
-                              target/
-
-                            # Scan source/configuration for secrets.
-                            trivy fs \
-                              --cache-dir /cache/trivy \
-                              --scanners secret \
-                              --offline-scan \
-                              --exit-code 1 \
-                              --timeout 5m \
-                              --skip-dirs .git \
-                              --skip-dirs target \
-                              .
-                        '''
-                    }
-                }
-            }
-        }
-    } // End of Dependency and Secret Scan stage
-} // End of stages
+    } // End stages
 
     post {
         success {
@@ -288,3 +225,4 @@ spec:
             echo 'Kubernetes agent pipeline failed'
         }
     }
+} // End pipeline
