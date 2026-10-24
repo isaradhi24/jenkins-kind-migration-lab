@@ -227,6 +227,9 @@ spec:
                         sh '''
                             set -eu
                             trivy --version
+                            echo "Persistent Trivy cache:"
+                            du -sh /cache/trivy
+                            ls -lh /cache/trivy/db /cache/trivy/java-db
 
                             test -s target/orders-service-0.0.1-SNAPSHOT.jar
 
@@ -256,9 +259,6 @@ spec:
                 }
             }
         }
-        echo "Persistent Trivy cache:"
-        du -sh /cache/trivy
-        ls -lh /cache/trivy/db /cache/trivy/java-db
     } // End of Dependency and Secret Scan stage
 
     post {
