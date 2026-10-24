@@ -72,11 +72,11 @@ The plugin officially supports creating an agent pod for a build and stopping it
             jenkins-lab-control-plane
             jenkins-lab-worker
             jenkins-lab-worker2
-        
+
 3. Install Jenkins using Helm.
 
     3.1. Add the official Jenins Helm repostory
-    
+
         ``helm repo add jenkins https://charts.jenkins.io`
     3.2. Check the chart
          ``bash``
@@ -124,30 +124,29 @@ kubectl port-forward -n jenkins svc/jenkins 8080:8080
 
 5. Once logged in, our next step is to verify the Kubernetes plugin and run a basic Groovy pipeline on a temporary agent pod.
 
+Daily start UP
 
+1. start Docker Desktop if needed:
+    open -a Docker
+2. From the Jenkins lab repository, run:
+    cd ~/Documents/DevOps/jenkins-kind-migration-lab
+    git status
+    kubectl --context kind-my-first-cluster get nodes
+    kubectl --context kind-my-first-cluster -n jenkins get pods
+3. If jenins pods status is UNKNOWN, let’s inspect before deleting the pod again:
+    kubectl --context kind-my-first-cluster -n jenkins describe pod jenkins-0
+    kubectl --context kind-my-first-cluster get pods -A -o wide
+4. Check the container runtime inside Jenkins’ worker:
+    docker exec my-first-cluster-worker crictl ps -a --name jenkins
+5. Then allow two minutes for recovery:
+    kubectl --context kind-my-first-cluster -n jenkins \
+    wait --for=condition=Ready pod/jenkins-0 --timeout=120s
 
+6. if still status same, then delete the pod and recreate
+    kubectl --context kind-my-first-cluster -n jenkins delete pod jenkins-0
 
+7. watch startup
+    kubectl --context kind-my-first-cluster -n jenkins get pods -w
 
-
-
-
-
-
-
-
-
-
-
-
-5. Configure persistent storage and Jenkins Configuration as Code.
-6. Configure Kubernetes dynamic agent pods.
-7. Run a simple Groovy “Hello World” pipeline.
-8. Run a Maven pipeline on an agent pod.
-9. Add a local registry and image build.
-10. Deploy the Java application into kind.
-11. Integrate the GitLab repository.
-12. Add Python, Node.js and legacy sample applications.
-13. Build discovery and migration scripts.
-14. Add multibranch pipelines and shared libraries.
-15. Convert one Jenkinsfile into .gitlab-ci.yml.
-
+8. Once it reaches 2/2 Running, restart port-forward:
+    kubectl --context kind-my-first-cluster -n jenkins port-forward svc/jenkins 8080:808
