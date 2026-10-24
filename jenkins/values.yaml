@@ -19,6 +19,9 @@ controller:
     -Xms265m
     -Xmx1024m
 
+  additionalPlugins:
+    - junit
+
 persistence:
   enabled: true
   storageClass: standard
