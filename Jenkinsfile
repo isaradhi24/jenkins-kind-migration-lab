@@ -5,6 +5,12 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+
+  volumes:
+    - name: build-cache
+      persistentVolumeClaim:
+        claimName: jenkins-build-cache
+
   nodeSelector:
     workload: jenkins
 
@@ -36,6 +42,10 @@ spec:
           cpu: "2"
           memory: 1536Mi
 
+      volumeMounts:
+        - name: build-cache
+          mountPath: /cache
+
     - name: trivy
       image: aquasec/trivy:0.76.1
       command:
@@ -48,8 +58,15 @@ spec:
         limits:
           cpu: "1"
           memory: 1Gi
+      volumeMounts:
+        - name: build-cache
+          mountPath: /cache
 '''
         }
+    }
+
+    options {
+        disableConcurrentBuilds()
     }
     parameters {
         choice(
@@ -59,7 +76,7 @@ spec:
         )
     }
     stages {
-        stage( 'Showw Environment' ) {
+        stage( 'Show Environment' ) {
             steps {
                 echo "Selected environment: ${params.TARGET_ENV}"
             }
@@ -131,11 +148,14 @@ spec:
                         sh  '''
                         java -version
                         chmod +x mvnw
-                        ./mvnw -B -ntp clean verify
+                        ./mvnw -B -ntp -Dmaven.repo.local=/cache/m2 clean verify
+                        test -s target/orders-service-0.0.1-SNAPSHOT.jar
+                        ls -lh target/orders-service-0.0.1-SNAPSHOT.jar
                         '''
                     }
                 }
             }
+
             post {
                 always {
                     junit (
@@ -157,20 +177,27 @@ spec:
                 container('trivy') {
                     dir('app') {
                         sh '''
+                            set -eu
                             trivy --version
 
-                            # Scan dependencies packaged in the application.
-                            trivy fs \
+                            test -s target/orders-service-0.0.1-SNAPSHOT.jar
+
+                            # Scan packaged Java dependencies.
+                            trivy rootfs \
+                              --cache-dir /cache/trivy \
                               --scanners vuln \
+                              --pkg-types library \
                               --offline-scan \
                               --severity HIGH,CRITICAL \
                               --exit-code 1 \
-                              --timeout 10m \
+                              --timeout 15m \
                               target/
 
-                            # Scan source and configuration for secrets.
+                            # Scan source/configuration for secrets.
                             trivy fs \
+                              --cache-dir /cache/trivy \
                               --scanners secret \
+                              --offline-scan \
                               --exit-code 1 \
                               --timeout 5m \
                               --skip-dirs .git \
@@ -181,7 +208,7 @@ spec:
                 }
             }
         }
-    }
+    } // End of Dependency and Secret Scan stage
 
     post {
         success {
@@ -192,4 +219,4 @@ spec:
             echo 'Kubernetes agent pipeline failed'
         }
     }
-}
+} // End of pipeline
