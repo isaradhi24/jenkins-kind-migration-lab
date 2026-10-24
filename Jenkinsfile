@@ -87,6 +87,11 @@ spec:
             choices: ['dev', 'qa', 'prod'],
             description: 'Select deployment environment'
         )
+        booleanParam(
+            name: 'RUN_SECURITY_SCAN',
+            defaultValue: true,
+            description: 'Run Trivy security scans'
+        )
     }
     stages {
         stage('Verify AWS Access') {
@@ -219,14 +224,26 @@ spec:
                 }
             }
         }
-
+        stage('Security Scan Selection') {
+            steps {
+                script {
+                    if (!params.RUN_SECURITY_SCAN) {
+                        echo 'LAB ONLY: Security scanning explicitly skipped.'
+                    }
+                }
+            }
+        }
         stage('Dependency and Secret Scan') {
+            when {
+                expression { params.RUN_SECURITY_SCAN }
+            }
             steps {
                 container('trivy') {
                     dir('app') {
                         sh '''
                             set -eu
                             trivy --version
+                            mkdir -p /cache/trivy
                             echo "Persistent Trivy cache:"
                             du -sh /cache/trivy
                             ls -lh /cache/trivy/db /cache/trivy/java-db
@@ -260,6 +277,7 @@ spec:
             }
         }
     } // End of Dependency and Secret Scan stage
+} // End of stages
 
     post {
         success {
