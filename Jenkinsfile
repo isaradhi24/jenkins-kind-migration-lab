@@ -288,4 +288,3 @@ spec:
             echo 'Kubernetes agent pipeline failed'
         }
     }
-} // End of pipeline
