@@ -22,6 +22,19 @@ spec:
         limits:
           cpu: 250m
           memory: 256Mi
+
+     - name: maven
+      image: maven:3.9-eclipse-temurin-21
+      command:
+        - cat
+      tty: true
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: "2"
+          memory: 1536Mi
 '''
         }
     }
@@ -83,6 +96,37 @@ spec:
                     }
 
                     echo "Total applications: ${applications.size()}"
+                }
+            }
+        }
+
+        stage('Checkout Java Application') {
+            steps {
+                dir('app') {
+                    git(
+                        branch: 'main',
+                        url: 'https://github.com/isaradhi24/orders-service.git'
+                    )
+                }
+            }
+        }
+
+        stage('Build and Test Java Application') {
+            steps {
+                container('maven') {
+                    dir('app') {
+                        sh  '''
+                        java -version
+                        chmod +x mvnw
+                        ./mvnw -B -ntp clean verify
+                        '''
+                    }
+                }
+            }
+            post {
+                always {
+                    junit 'app/target/surefire-reports/*.xml'
+                    allowEmptyResults: false
                 }
             }
         }
